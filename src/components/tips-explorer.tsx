@@ -30,15 +30,21 @@ function TipCard({ tip }: { tip: Tip }) {
 
 export function TipsExplorer({ tips, isOwner }: { tips: Tip[]; isOwner: boolean }) {
   const [selectedLeague, setSelectedLeague] = useState<string>("Alle Ligen");
+  const [selectedMatchday, setSelectedMatchday] = useState<string>("Alle Spieltage");
   const [expanded, setExpanded] = useState<string[]>([]);
   const [fixtureChoices, setFixtureChoices] = useState<Record<string, FixtureChoice>>({});
   const [activeFixture, setActiveFixture] = useState<string | null>(null);
   const [showSkipped, setShowSkipped] = useState<Record<string, boolean>>({});
-  const visibleLeagues = leagueOrder.filter((league) => selectedLeague === "Alle Ligen" || selectedLeague === league);
+  const matchdayOptions = leagueOrder.map((league) => ({ value: `${league}::${fixtureSchedules[league].label}`, league, label: fixtureSchedules[league].label }));
+  const visibleLeagues = leagueOrder.filter((league) =>
+    (selectedLeague === "Alle Ligen" || selectedLeague === league)
+    && (selectedMatchday === "Alle Spieltage" || selectedMatchday.startsWith(`${league}::`)));
+  const shownLeagues = isOwner ? visibleLeagues : leagueOrder.filter((league) => selectedLeague === "Alle Ligen" || selectedLeague === league);
 
-  const publicLeagues = leagueOrder.filter((league) => tips.some((tip) => tip.league === league));
-  const shownLeagues = isOwner ? visibleLeagues : publicLeagues.filter((league) => selectedLeague === "Alle Ligen" || selectedLeague === league);
-  const filterLeagues = isOwner ? leagueOrder : publicLeagues;
+  function officialMatchday(league: string, matchId: string) {
+    const schedule = fixtureSchedules[league];
+    return schedule?.dates.some((date) => date.fixtures.some((fixture) => fixture.id === matchId)) ? schedule.label : null;
+  }
 
   useEffect(() => {
     if (!isOwner) return;
@@ -113,24 +119,42 @@ export function TipsExplorer({ tips, isOwner }: { tips: Tip[]; isOwner: boolean 
   }
 
   return <div className="tips-explorer">
-    {shownLeagues.length > 0 && <div className="league-filter" role="group" aria-label="Tipps nach Liga filtern">
-      {["Alle Ligen", ...filterLeagues].map((league) => <button key={league} type="button" className={selectedLeague === league ? "league-filter-button selected" : "league-filter-button"} aria-pressed={selectedLeague === league} onClick={() => setSelectedLeague(league)}>{league}{league !== "Alle Ligen" && <span className={`league-filter-logo league-logo-${league.toLowerCase().replaceAll(" ", "-")}`} aria-hidden="true"><Image className="league-logo-image" src={leagueLogos[league as (typeof leagueOrder)[number]]} alt="" width={48} height={48} unoptimized /></span>}</button>)}
-    </div>}
+    <div className="league-filter" role="group" aria-label="Tipps nach Liga filtern">
+      {["Alle Ligen", ...leagueOrder].map((league) => <button key={league} type="button" className={selectedLeague === league ? "league-filter-button selected" : "league-filter-button"} aria-pressed={selectedLeague === league} onClick={() => { setSelectedLeague(league); setSelectedMatchday("Alle Spieltage"); }}>{league}{league !== "Alle Ligen" && <span className={`league-filter-logo league-logo-${league.toLowerCase().replaceAll(" ", "-")}`} aria-hidden="true"><Image className="league-logo-image" src={leagueLogos[league as (typeof leagueOrder)[number]]} alt="" width={48} height={48} unoptimized /></span>}</button>)}
+    </div>
+    {isOwner && <label className="owner-matchday-filter">Spieltag
+      <select value={selectedMatchday} onChange={(event) => setSelectedMatchday(event.target.value)}>
+        <option value="Alle Spieltage">Alle Spieltage</option>
+        {matchdayOptions.filter((option) => selectedLeague === "Alle Ligen" || option.league === selectedLeague).map((option) => <option key={option.value} value={option.value}>{option.league} · {option.label}</option>)}
+      </select>
+    </label>}
     <div className="league-sections">
       {shownLeagues.map((league) => {
         const leagueTips = tips.filter((tip) => tip.league === league);
         if (!isOwner) {
-          const groups = new Map<string, Tip[]>();
-          leagueTips.forEach((tip) => groups.set(tip.matchId, [...(groups.get(tip.matchId) ?? []), tip]));
+          const groups = new Map<string, Map<string, Tip[]>>();
+          leagueTips.forEach((tip) => {
+            const matchday = officialMatchday(league, tip.matchId);
+            if (!matchday) return;
+            const matches = groups.get(matchday) ?? new Map<string, Tip[]>();
+            matches.set(tip.matchId, [...(matches.get(tip.matchId) ?? []), tip]);
+            groups.set(matchday, matches);
+          });
+          const publishedCount = Array.from(groups.values()).reduce((count, matches) => count + Array.from(matches.values()).reduce((sum, matchTips) => sum + matchTips.length, 0), 0);
           return <section className="league-section" key={league}>
-            <h2 className="league-heading"><span className="league-toggle"><span className="league-title-group"><span className={`league-heading-logo league-logo-${league.toLowerCase().replaceAll(" ", "-")}`} aria-hidden="true"><Image className="league-logo-image" src={leagueLogos[league]} alt="" width={64} height={64} unoptimized /></span><span className="league-heading-copy"><span className="league-name">{league}</span><span className="league-count">{leagueTips.length} {leagueTips.length === 1 ? "Tipp" : "Tipps"}</span></span></span></span></h2>
-            <div className="league-content"><div className="fixture-list">{Array.from(groups, ([matchId, matchTips]) => <article className="fixture-row" key={matchId}>{matchTips.map((tip) => <TipCard key={tip.id} tip={tip}/>)}</article>)}</div></div>
+            <h2 className="league-heading"><span className="league-toggle"><span className="league-title-group"><span className={`league-heading-logo league-logo-${league.toLowerCase().replaceAll(" ", "-")}`} aria-hidden="true"><Image className="league-logo-image" src={leagueLogos[league]} alt="" width={64} height={64} unoptimized /></span><span className="league-heading-copy"><span className="league-name">{league}</span><span className="league-count">{publishedCount} {publishedCount === 1 ? "Tipp" : "Tipps"}</span></span></span></span></h2>
+            <div className="league-content">
+              {groups.size === 0 ? <p className="public-empty-state">Noch keine Tipps veröffentlicht.</p> : Array.from(groups, ([matchday, matches]) => <section className="public-matchday" key={matchday}>
+                <h3 className="fixture-date-heading">{matchday}</h3>
+                <div className="fixture-list">{Array.from(matches, ([matchId, matchTips]) => <article className="fixture-row" key={matchId}>{matchTips.map((tip) => <TipCard key={tip.id} tip={tip}/>)}</article>)}</div>
+              </section>)}
+            </div>
           </section>;
         }
         const schedule = fixtureSchedules[league];
         const fixtureCount = schedule.dates.reduce((count, date) => count + date.fixtures.length, 0);
         const skippedCount = schedule.dates.reduce((count, date) => count + date.fixtures.filter((fixture) => fixtureChoices[fixture.id] === "skip").length, 0);
-        const open = expanded.includes(league);
+        const open = expanded.includes(league) || selectedMatchday === `${league}::${schedule.label}`;
         const panelId = `league-${league.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
         return <section className={`league-section ${open ? "expanded" : ""}`} key={league}>
           <h2 className="league-heading">
