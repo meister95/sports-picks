@@ -2,15 +2,17 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text not null unique check (char_length(username) between 2 and 24),
+  avatar_path text,
   is_owner boolean not null default false,
   created_at timestamptz not null default now()
 );
+alter table public.profiles add column if not exists avatar_path text;
 
 create table if not exists public.tip_reactions (
   id uuid primary key default gen_random_uuid(),
   tip_id text not null,
   user_id uuid not null references public.profiles(id) on delete cascade,
-  reaction text not null check (reaction in ('like', 'dislike')),
+  reaction text not null check (reaction = 'like'),
   created_at timestamptz not null default now(),
   unique (tip_id, user_id)
 );
@@ -60,10 +62,9 @@ grant select on public.prediq_tips to authenticated;
 grant insert (owner_id, league, match_id, home, away, selection, reasoning, odds, risk, result, kickoff, is_published, published_at) on public.prediq_tips to authenticated;
 grant update (league, match_id, home, away, selection, reasoning, odds, risk, result, kickoff, is_published) on public.prediq_tips to authenticated;
 grant delete on public.prediq_tips to authenticated;
-grant insert (id, username) on public.profiles to authenticated;
-grant update (username) on public.profiles to authenticated;
-grant insert (tip_id, user_id, reaction) on public.tip_reactions to authenticated;
-grant update (reaction) on public.tip_reactions to authenticated;
+grant insert (id, username, avatar_path) on public.profiles to authenticated;
+grant update (username, avatar_path) on public.profiles to authenticated;
+grant insert, update on public.tip_reactions to authenticated;
 grant delete on public.tip_reactions to authenticated;
 grant insert (tip_id, user_id, body) on public.tip_comments to authenticated;
 grant update (body) on public.tip_comments to authenticated;
@@ -118,3 +119,33 @@ create policy "Only owner can delete tips" on public.prediq_tips for delete to a
 
 -- Optional: after creating your own account and profile, grant moderation rights:
 -- update public.profiles set is_owner = true where username = 'YOUR_USERNAME';
+
+-- Profile photos are visible to signed-in users only; each user may only manage their own file.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('prediq-avatars', 'prediq-avatars', false, 2097152, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Users read their own PREDIQ avatar object" on storage.objects;
+drop policy if exists "Authenticated users read PREDIQ avatars" on storage.objects;
+create policy "Authenticated users read PREDIQ avatars"
+on storage.objects for select to authenticated
+using (bucket_id = 'prediq-avatars');
+
+drop policy if exists "Users upload their own PREDIQ avatar" on storage.objects;
+create policy "Users upload their own PREDIQ avatar"
+on storage.objects for insert to authenticated
+with check (bucket_id = 'prediq-avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "Users update their own PREDIQ avatar" on storage.objects;
+create policy "Users update their own PREDIQ avatar"
+on storage.objects for update to authenticated
+using (bucket_id = 'prediq-avatars' and (storage.foldername(name))[1] = (select auth.uid())::text)
+with check (bucket_id = 'prediq-avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "Users delete their own PREDIQ avatar" on storage.objects;
+create policy "Users delete their own PREDIQ avatar"
+on storage.objects for delete to authenticated
+using (bucket_id = 'prediq-avatars' and (storage.foldername(name))[1] = (select auth.uid())::text);

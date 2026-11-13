@@ -9,7 +9,6 @@ export type Tip = {
   away: string;
   selection: string;
   reasoning: string;
-  odds?: number;
   risk: TipRisk;
   result: TipResult;
   publishedAt: string;

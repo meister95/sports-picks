@@ -12,6 +12,10 @@ export async function saveProfileAction(_previous: ProfileState, formData: FormD
   if (!supabase) return { error: "Supabase ist noch nicht verbunden." };
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const avatarPath = String(formData.get("avatar_path") ?? "").trim();
+  if (avatarPath && avatarPath !== `${user.id}/avatar`) {
+    return { error: "Das ausgewählte Profilbild ist ungültig. Bitte lade es erneut hoch." };
+  }
   const password = String(formData.get("password") ?? "");
   if (formData.get("invited") === "1") {
     if (password.length < 8) return { error: "Das Passwort muss mindestens 8 Zeichen lang sein." };
@@ -28,12 +32,16 @@ export async function saveProfileAction(_previous: ProfileState, formData: FormD
     return { error: `Profil konnte nicht geprüft werden (Fehlercode ${lookupError.code ?? "unbekannt"}).` };
   }
 
+  const profileValues = avatarPath ? { username, avatar_path: avatarPath } : { username };
   const { error } = existingProfile
-    ? await supabase.from("profiles").update({ username }).eq("id", user.id)
-    : await supabase.from("profiles").insert({ id: user.id, username });
+    ? await supabase.from("profiles").update(profileValues).eq("id", user.id)
+    : await supabase.from("profiles").insert({ id: user.id, ...profileValues });
   if (error) {
     console.error("Profile upsert failed", { code: error.code, message: error.message, details: error.details, hint: error.hint });
     if (error.code === "23505") return { error: "Dieser Nutzername ist bereits vergeben." };
+    if (avatarPath && (error.code === "42703" || error.code === "PGRST204" || error.code === "42501")) {
+      return { error: "Die Profilbild-Funktion ist in Supabase noch nicht eingerichtet." };
+    }
     return { error: `Profil konnte nicht gespeichert werden (Fehlercode ${error.code ?? "unbekannt"}).` };
   }
   redirect("/tipps");

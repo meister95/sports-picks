@@ -18,16 +18,15 @@ export async function publishTip(input: Omit<Tip, "id" | "publishedAt" | "result
   const home = input.home.trim();
   const away = input.away.trim();
   const selection = input.selection.trim();
-  const reasoning = input.reasoning.trim();
+  const reasoning = input.reasoning.trim() || "Keine Begründung angegeben.";
   const risk: TipRisk = input.risk === "sicher" || input.risk === "riskant" ? input.risk : "moderat";
-  const odds = input.odds;
   if (!league || !matchId || !home || !away || !selection || selection.length > 100 || !reasoning || reasoning.length > 1000
-    || (odds !== undefined && (!Number.isFinite(odds) || odds <= 1))) return null;
+  ) return null;
 
   const publishedAt = new Date().toISOString();
   const { data, error } = await supabase.from("prediq_tips").insert({
     owner_id: user.id, league, match_id: matchId, home, away, selection, reasoning,
-    odds: odds ?? null, risk, result: "offen", published_at: publishedAt, kickoff: input.kickoff, is_published: true,
+    risk, result: "offen", published_at: publishedAt, kickoff: input.kickoff, is_published: true,
   }).select("id").single();
   if (error || !data) return null;
 

@@ -9,6 +9,7 @@ export function LoginForm() {
   return <form action={action} className="auth-form">
     <label>E-Mail<input name="email" type="email" autoComplete="email" required /></label>
     <label>Passwort<PasswordInput name="password" autoComplete="current-password" required /></label>
+    <label className="remember-me"><input name="rememberMe" type="checkbox" />Angemeldet bleiben</label>
     {state.error && <p className="form-error" role="alert">{state.error}</p>}
     <button className="auth-submit" disabled={pending}>{pending ? "Melde an …" : "Einloggen"}</button>
   </form>;

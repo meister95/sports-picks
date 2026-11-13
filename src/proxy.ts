@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
+import { REMEMBER_ME_COOKIE, sessionCookieOptions, shouldRememberSession } from "@/lib/supabase/session-cookies";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -15,6 +16,7 @@ export async function proxy(request: NextRequest) {
   }
 
   let response = NextResponse.next({ request });
+  const rememberMe = shouldRememberSession(request.cookies.get(REMEMBER_ME_COOKIE)?.value);
   const supabase = createServerClient(env.url, env.publishableKey, {
     cookies: {
       getAll() {
@@ -23,7 +25,7 @@ export async function proxy(request: NextRequest) {
       setAll(cookiesToSet, cacheHeaders) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, sessionCookieOptions(options, rememberMe)));
         Object.entries(cacheHeaders).forEach(([name, value]) => response.headers.set(name, value));
       },
     },

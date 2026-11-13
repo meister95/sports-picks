@@ -10,6 +10,41 @@ import Image from "next/image";
 type FixtureChoice = "follow" | "skip";
 const riskLabels: Record<TipRisk, string> = { sicher: "Sicher", moderat: "Moderat", riskant: "Riskant" };
 const resultLabels: Record<TipResult, string> = { offen: "Offen", gewonnen: "Gewonnen", verloren: "Verloren" };
+const noReasoning = "Keine Begründung angegeben.";
+
+const pickMarkets = [
+  { id: "match-result", label: "Spielausgang" },
+  { id: "double-chance", label: "Doppelte Chance" },
+  { id: "draw-no-bet", label: "Unentschieden: Einsatz zurück" },
+  { id: "both-score", label: "Beide Teams treffen" },
+  { id: "total-goals", label: "Gesamttore" },
+  { id: "team-goals", label: "Team trifft" },
+  { id: "half-time", label: "Halbzeitergebnis" },
+  { id: "player-goal", label: "Spieler erzielt ein Tor" },
+  { id: "player-shots", label: "Spieler: Schüsse aufs Tor" },
+  { id: "total-corners", label: "Gesamtecken" },
+  { id: "total-cards", label: "Gesamtkarten" },
+  { id: "custom", label: "Eigene Auswahl" },
+] as const;
+
+type PickMarket = (typeof pickMarkets)[number]["id"];
+
+function optionsFor(market: PickMarket, fixture: Fixture) {
+  switch (market) {
+    case "match-result": return [fixture.home, "Unentschieden", fixture.away];
+    case "double-chance": return [`${fixture.home} oder Unentschieden (1X)`, `${fixture.home} oder ${fixture.away} (12)`, `Unentschieden oder ${fixture.away} (X2)`];
+    case "draw-no-bet": return [fixture.home, fixture.away];
+    case "both-score": return ["Ja", "Nein"];
+    case "total-goals": return [0.5, 1.5, 2.5, 3.5, 4.5].flatMap((line) => [`Über ${line.toLocaleString("de-AT")}`, `Unter ${line.toLocaleString("de-AT")}`]);
+    case "team-goals": return [`${fixture.home}: Ja`, `${fixture.home}: Nein`, `${fixture.away}: Ja`, `${fixture.away}: Nein`];
+    case "half-time": return [fixture.home, "Unentschieden", fixture.away];
+    case "player-goal": return ["Erzielt ein Tor"];
+    case "player-shots": return ["1+ Schuss aufs Tor", "2+ Schüsse aufs Tor", "3+ Schüsse aufs Tor"];
+    case "total-corners": return [7.5, 8.5, 9.5, 10.5, 11.5].flatMap((line) => [`Über ${line.toLocaleString("de-AT")}`, `Unter ${line.toLocaleString("de-AT")}`]);
+    case "total-cards": return [2.5, 3.5, 4.5, 5.5].flatMap((line) => [`Über ${line.toLocaleString("de-AT")}`, `Unter ${line.toLocaleString("de-AT")}`]);
+    case "custom": return [];
+  }
+}
 
 function TipCard({ tip }: { tip: Tip }) {
   return <article className={`prediction ${tip.result === "offen" ? `risk-${tip.risk}` : `result-${tip.result}`}`}>
@@ -17,14 +52,46 @@ function TipCard({ tip }: { tip: Tip }) {
       <span className="prediction-match">{tip.home} <span>vs</span> {tip.away}</span>
       <span className={`prediction-result result-label-${tip.result}`}>{resultLabels[tip.result]}</span>
     </div>
-    <div className="prediction-selection">{tip.selection}</div>
-    <p className="prediction-reason">{tip.reasoning}</p>
+    <TipSelection tip={tip}/>
     <div className="prediction-meta">
       <span className={`risk-label risk-label-${tip.risk}`}>{riskLabels[tip.risk]} eingeschätzt</span>
-      {tip.odds && <span>Quote {tip.odds.toFixed(2)}</span>}
       <span>{tip.kickoff}</span>
     </div>
-    <TipSocial tipId={tip.id}/>
+    <TipSocial tipId={tip.id} isOwner/>
+  </article>;
+}
+
+function TipSelection({ tip }: { tip: Tip }) {
+  const hasReasoning = Boolean(tip.reasoning && tip.reasoning !== noReasoning);
+  const separator = tip.selection.indexOf(":");
+  const market = separator >= 0 ? tip.selection.slice(0, separator) : "Tipp";
+  const pick = separator >= 0 ? tip.selection.slice(separator + 1).trim() : tip.selection;
+  const selection = <><span className="prediction-market">{market}</span><span className="prediction-pick">{pick}</span></>;
+
+  return hasReasoning ? <details className="prediction-reason-wrap">
+    <summary className="prediction-selection">{selection}<svg className="prediction-chevron" aria-hidden="true" viewBox="0 0 16 16" fill="none"><path d="m3.5 6 4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></summary>
+    <p className="prediction-reason">{tip.reasoning}</p>
+  </details> : <div className="prediction-selection">{selection}</div>;
+}
+
+function PublicMatchCard({ tips }: { tips: Tip[] }) {
+  const match = tips[0];
+  if (!match) return null;
+  return <article className="public-match-card">
+    <header className="public-match-heading">
+      <div className="public-match-teams"><span>{match.home}</span><span className="public-match-versus">vs</span><span>{match.away}</span></div>
+      <time>{match.kickoff}</time>
+    </header>
+    <div className="public-match-selections">
+      {tips.map((tip) => <article key={tip.id} className={`prediction public-tip-option ${tip.result === "offen" ? `risk-${tip.risk}` : `result-${tip.result}`}`}>
+        <TipSelection tip={tip}/>
+        <div className="prediction-meta">
+          <span className={`risk-label risk-label-${tip.risk}`}>{riskLabels[tip.risk]}</span>
+          <span className={`prediction-result result-label-${tip.result}`}>{resultLabels[tip.result]}</span>
+        </div>
+        <TipSocial tipId={tip.id}/>
+      </article>)}
+    </div>
   </article>;
 }
 
@@ -95,10 +162,8 @@ export function TipsExplorer({ tips, isOwner }: { tips: Tip[]; isOwner: boolean 
     if (!isOwner) return;
     const selection = String(formData.get("selection") ?? "").trim();
     const reasoning = String(formData.get("reasoning") ?? "").trim();
-    const oddsValue = String(formData.get("odds") ?? "").trim();
-    const odds = oddsValue ? Number(oddsValue) : undefined;
     const riskValue = String(formData.get("risk") ?? "moderat");
-    if (!selection || !reasoning || (oddsValue && (!Number.isFinite(odds) || odds! <= 1))) return;
+    if (!selection) return;
 
     const tip = await publishTip({
       league,
@@ -109,7 +174,6 @@ export function TipsExplorer({ tips, isOwner }: { tips: Tip[]; isOwner: boolean 
       reasoning,
       risk: riskValue === "sicher" || riskValue === "riskant" ? riskValue : "moderat",
       kickoff: `${date} · ${fixture.kickoff}`,
-      ...(odds ? { odds } : {}),
     });
     if (tip) setActiveFixture(null);
   }
@@ -146,7 +210,7 @@ export function TipsExplorer({ tips, isOwner }: { tips: Tip[]; isOwner: boolean 
             <div className="league-content">
               {groups.size === 0 ? <p className="public-empty-state">Noch keine Tipps veröffentlicht.</p> : Array.from(groups, ([matchday, matches]) => <section className="public-matchday" key={matchday}>
                 <h3 className="fixture-date-heading">{matchday}</h3>
-                <div className="fixture-list">{Array.from(matches, ([matchId, matchTips]) => <article className="fixture-row" key={matchId}>{matchTips.map((tip) => <TipCard key={tip.id} tip={tip}/>)}</article>)}</div>
+                <div className="public-match-list">{Array.from(matches, ([matchId, matchTips]) => <PublicMatchCard key={matchId} tips={matchTips}/>)}</div>
               </section>)}
             </div>
           </section>;
@@ -202,44 +266,74 @@ function FixtureRow({ fixture, date, league, choice, tips, formOpen, onChoose, o
   onCancel: () => void;
   onSave: (formData: FormData) => Promise<void>;
 }) {
+  const [tipPanelOverride, setTipPanelOverride] = useState<boolean | null>(null);
+  const tipPanelExpanded = tipPanelOverride ?? (choice === "follow" || tips.length > 0 || formOpen);
+  const tipPanelId = `fixture-tips-${fixture.id}`;
+
   return <article className={`fixture-row ${choice ? `fixture-${choice}` : ""}`}>
     <div className="fixture-info">
       <span className="fixture-teams">{fixture.home}<span>vs</span>{fixture.away}</span>
       <time className="fixture-time">{fixture.kickoff}</time>
     </div>
     <div className="fixture-actions" role="group" aria-label={`${fixture.home} gegen ${fixture.away}`}>
-      <button type="button" aria-pressed={choice === "follow"} className={choice === "follow" ? "fixture-choice is-selected" : "fixture-choice"} onClick={() => onChoose(fixture.id, "follow")}>Verfolge ich</button>
+      <button type="button" aria-pressed={choice === "follow"} className={choice === "follow" ? "fixture-choice is-selected" : "fixture-choice"} onClick={() => { setTipPanelOverride(null); onChoose(fixture.id, "follow"); }}>Verfolge ich</button>
       <button type="button" aria-pressed={choice === "skip"} className={choice === "skip" ? "fixture-choice is-selected" : "fixture-choice"} onClick={() => onChoose(fixture.id, "skip")}>Überspringen</button>
     </div>
     {choice && <button className="clear-fixture-choice" type="button" onClick={onClear}>Auswahl zurücksetzen</button>}
-    {tips.length > 0 && <div className="fixture-tips">
-      <p className="fixture-tip-count">{tips.length} {tips.length === 1 ? "Tipp" : "Tipps"} von dir</p>
-      {tips.map((tip) => <TipCard key={tip.id} tip={tip}/>)}
-      <button className="add-tip-button" type="button" onClick={onAddTip}>+ Weitere Auswahl hinzufügen</button>
-    </div>}
-    {formOpen && <TipEntryForm fixture={fixture} onSave={onSave} onCancel={onCancel} />}
-    {!formOpen && tips.length === 0 && choice === "follow" && <button className="add-tip-button" type="button" onClick={onAddTip}>Tipp zu diesem Spiel schreiben</button>}
+    {(tips.length > 0 || formOpen || choice === "follow") && <>
+      <button className="fixture-tip-toggle" type="button" aria-expanded={tipPanelExpanded} aria-controls={tipPanelId} onClick={() => setTipPanelOverride(!tipPanelExpanded)}>
+        <span>{tips.length > 0 ? `${tips.length} ${tips.length === 1 ? "Tipp" : "Tipps"} für dieses Spiel` : "Tipp-Eingabe"}</span>
+        <svg className="fixture-tip-chevron" aria-hidden="true" viewBox="0 0 16 16" fill="none"><path d="m3.5 6 4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
+      <div className="fixture-tip-panel" id={tipPanelId} hidden={!tipPanelExpanded}>
+        {tips.length > 0 && <div className="fixture-tips">{tips.map((tip) => <TipCard key={tip.id} tip={tip}/>)}
+          <button className="add-tip-button" type="button" onClick={onAddTip}>+ Weitere Auswahl hinzufügen</button>
+        </div>}
+        {formOpen && <TipEntryForm fixture={fixture} onSave={onSave} onCancel={onCancel} />}
+        {!formOpen && tips.length === 0 && choice === "follow" && <button className="add-tip-button" type="button" onClick={onAddTip}>Tipp zu diesem Spiel schreiben</button>}
+      </div>
+    </>}
     <span className="sr-only">{league}, {date}</span>
   </article>;
 }
 
 function TipEntryForm({ fixture, onSave, onCancel }: { fixture: Fixture; onSave: (formData: FormData) => Promise<void>; onCancel: () => void }) {
+  const [market, setMarket] = useState<PickMarket>("match-result");
+  const [choice, setChoice] = useState(fixture.home);
+  const [player, setPlayer] = useState("");
+  const [customChoice, setCustomChoice] = useState("");
+  const options = optionsFor(market, fixture);
+  const marketLabel = pickMarkets.find((item) => item.id === market)?.label ?? "Auswahl";
+  const selection = market === "custom"
+    ? (customChoice.trim() ? `Eigene Auswahl: ${customChoice.trim()}` : "")
+    : market === "player-goal"
+      ? (player.trim() ? `${marketLabel}: ${player.trim()} erzielt ein Tor` : "")
+      : market === "player-shots"
+        ? (player.trim() && choice ? `${marketLabel}: ${player.trim()} · ${choice}` : "")
+        : `${marketLabel}: ${choice}`;
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const oddsValue = String(formData.get("odds") ?? "").trim();
-    if (oddsValue && (!Number.isFinite(Number(oddsValue)) || Number(oddsValue) <= 1)) return;
+    formData.set("selection", selection);
+    if (!selection) return;
     await onSave(formData);
     form.reset();
   }
 
   return <form className="tip-entry-form" onSubmit={submit}>
     <h4>Tipp für {fixture.home} – {fixture.away}</h4>
-    <label>Deine Auswahl<input name="selection" required maxLength={100} placeholder="z. B. Beide Teams treffen" /></label>
-    <label>Deine Begründung<textarea name="reasoning" required maxLength={1000} rows={3} placeholder="Warum erwartest du dieses Ergebnis?" /></label>
+    <label>Wettart<select value={market} onChange={(event) => { const next = event.target.value as PickMarket; setMarket(next); setChoice(optionsFor(next, fixture)[0] ?? ""); setPlayer(""); setCustomChoice(""); }}>
+      {pickMarkets.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+    </select></label>
+    {(market === "player-goal" || market === "player-shots") && <label>Spielername<input value={player} onChange={(event) => setPlayer(event.target.value)} maxLength={45} placeholder="z. B. Bukayo Saka" /></label>}
+    {market === "custom" ? <label>Deine Auswahl<input value={customChoice} onChange={(event) => setCustomChoice(event.target.value)} maxLength={80} placeholder="z. B. Exaktes Ergebnis 2:1" /></label> : <fieldset className="pick-choice-fieldset">
+      <legend>Auswahl</legend>
+      <div className="pick-choice-grid">{options.map((option) => <button key={option} type="button" className={choice === option ? "pick-choice selected" : "pick-choice"} aria-pressed={choice === option} onClick={() => setChoice(option)}>{option}</button>)}</div>
+    </fieldset>}
+    <label>Begründung (optional)<textarea name="reasoning" maxLength={1000} rows={3} placeholder="Warum erwartest du dieses Ergebnis?" /></label>
     <div className="tip-entry-row">
-      <label>Quote <span>(optional)</span><input name="odds" type="number" min="1.01" step="0.01" inputMode="decimal" placeholder="1,85" /></label>
       <label>Risiko<select name="risk" defaultValue="moderat"><option value="sicher">Sicher</option><option value="moderat">Moderat</option><option value="riskant">Riskant</option></select></label>
     </div>
     <div className="tip-entry-actions"><button className="tip-save-button" type="submit">Tipp speichern</button><button className="tip-cancel-button" type="button" onClick={onCancel}>Abbrechen</button></div>

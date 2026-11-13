@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/current-user";
 import { signOutAction } from "@/app/login/actions";
+import { UserAvatar } from "@/components/user-avatar";
 
 const navItems = [
   { href: "/tipps", label: "Tipps" },
@@ -10,14 +11,16 @@ const navItems = [
 ];
 
 export async function SiteHeader({ currentPath }: { currentPath: string }) {
-  const supabase = await createClient();
-  const authResult = supabase ? await supabase.auth.getUser() : null;
-  const user = authResult?.data.user ?? null;
-  const { data: profile } = user && supabase ? await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle() : { data: null };
+  const { supabase, user, profile } = await getCurrentUser();
+  const username = profile?.username ?? user?.email ?? "Profil";
+  const avatarResult = profile?.avatar_path && supabase
+    ? await supabase.storage.from("prediq-avatars").createSignedUrl(profile.avatar_path, 86400)
+    : null;
+  const avatarUrl = avatarResult?.data?.signedUrl ?? null;
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Link className="brand" href="/tipps" aria-label="PREDIQ Tipps">
+        <Link className="brand" href="/tipps" prefetch aria-label="PREDIQ Tipps">
           <span className="brand-mark"><Image src="/brand/prediq-mark.png" alt="" aria-hidden="true" width={500} height={400} priority /></span>
           <span className="brand-name">PREDIQ</span>
         </Link>
@@ -28,12 +31,13 @@ export async function SiteHeader({ currentPath }: { currentPath: string }) {
               className={currentPath === item.href ? "nav-link active" : "nav-link"}
               href={item.href}
               key={item.href}
+              prefetch
             >
               {item.label}
             </Link>
           ))}
         </nav>}
-        {user ? <div className="header-account"><span>{profile?.username ?? user.email}</span><form action={signOutAction}><button type="submit">Abmelden</button></form></div> : <Link className="header-login" href="/login">Einloggen</Link>}
+        {user ? <div className="header-account"><Link className="header-profile-link" href="/profil" aria-label="Profil bearbeiten"><UserAvatar src={avatarUrl} name={username} className="header-avatar"/><span>{username}</span></Link><form action={signOutAction}><button type="submit">Abmelden</button></form></div> : <Link className="header-login" href="/login">Einloggen</Link>}
       </div>
     </header>
   );

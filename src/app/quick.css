@@ -56,8 +56,6 @@ body { background: var(--bg); }
 .quick-footer .footer-inner { min-height: 58px; }
 .footer-brand-name { color: #aab6cf; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
 .quick-footer .footer-copy { color: #77839b; font-size: 9px; }
-.logo-credit { margin-left: auto; color: #77839b; font-size: 9px; text-decoration: none; }
-.logo-credit:hover { color: #c0adff; }
 
 @media (max-width: 620px) {
   .quick-page { width: calc(100% - 24px); padding-top: 10px; }
@@ -65,7 +63,6 @@ body { background: var(--bg); }
   .bet-slip-bar { min-height: 52px; padding: 9px 11px; }
   .bet-slip-content { padding: 0 6px 6px; }
   .slip-pick { padding-inline: 9px; }
-  .logo-credit { font-size: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) { .slip-chevron { transition: none; } }
@@ -99,26 +96,57 @@ body { background: var(--bg); }
 .public-empty-state { margin: 0; padding: 12px 3px 5px; border-top: 1px solid #273451; color: #9aa7c2; font-size: 11px; line-height: 1.5; }
 .public-matchday { padding-top: 10px; border-top: 1px solid #273451; }
 .public-matchday + .public-matchday { margin-top: 12px; }
+.public-match-list { display: grid; gap: 10px; }
+.public-match-card { min-width: 0; padding: 13px; border: 1px solid #273451; border-radius: 6px; background: #0c1425; }
+.public-match-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 11px; border-bottom: 1px solid #ffffff16; color: #aab6cc; font-size: 11px; }
+.public-match-teams { display: flex; align-items: center; gap: 9px; color: #e5e9f2; font-size: 14px; font-weight: 650; }
+.public-match-versus { color: #72809a; font-size: 11px; font-weight: 500; }
+.public-match-selections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); gap: 9px; padding-top: 10px; }
+.league-section:has(.public-match-card) { grid-column: 1 / -1; }
+.public-tip-option { padding: 11px; }
+.public-tip-option .prediction-selection { margin-top: 0; }
+.public-tip-option .prediction-meta { margin-top: 9px; }
+.public-tip-option .tip-social { margin-top: 10px; }
 .league-empty { margin: 0; padding: 15px 4px 9px; border-top: 1px solid #273451; color: #8490aa; font-size: 10px; }
 .match-group { border-top: 1px solid #273451; padding-top: 10px; }
 .match-group + .match-group { margin-top: 10px; }
 .match-title { margin: 0 2px 8px; color: #cdd4e2; font-size: 11px; font-weight: 620; }
 .match-title span { padding-inline: 4px; color: #65718a; font-size: 9px; }
-.prediction-list { display: grid; gap: 7px; }
-.prediction { min-width: 0; padding: 10px; border: 1px solid #364057; border-radius: 5px; background: #0d1425; }
+.prediction-list { display: grid; gap: 10px; }
+.prediction { min-width: 0; padding: 14px; border: 1px solid #364057; border-radius: 6px; background: #0d1425; }
 .prediction.risk-sicher { border-color: #43a879; }
 .prediction.risk-moderat { border-color: #bd9b3e; }
 .prediction.risk-riskant { border-color: #c45c67; }
 .prediction.result-gewonnen { border-color: #237b52; background: #123523; }
 .prediction.result-verloren { border-color: #8a3842; background: #3a1920; }
-.prediction-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.prediction-match { color: #a5b0c7; font-size: 9px; }
+.prediction-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.prediction-match { color: #b7c2d8; font-size: 12px; line-height: 1.4; }
 .prediction-match span { color: #64708a; }
-.prediction-result { flex: 0 0 auto; color: #96a1b8; font-size: 8px; }
-.prediction-selection { margin-top: 6px; color: #f0f2f8; font-size: 11px; font-weight: 650; }
-.prediction-reason { margin: 5px 0 9px; color: #abb6ca; font-size: 9px; line-height: 1.5; }
-.prediction-meta { display: flex; justify-content: space-between; gap: 8px; padding-top: 7px; border-top: 1px solid #ffffff12; color: #8d99b1; font-size: 8px; }
+.prediction-result { flex: 0 0 auto; color: #aeb9ce; font-size: 10px; }
+.prediction-selection { display: flex; align-items: center; gap: 10px; margin-top: 11px; color: #f0f2f8; font-size: 13px; font-weight: 650; line-height: 1.4; text-align: left; }
+.prediction-selection::-webkit-details-marker { display: none; }
+.prediction-market { min-width: 0; color: #b1bdd3; font-size: 11px; font-weight: 550; }
+.prediction-pick { max-width: 78%; margin-left: auto; padding: 7px 10px; border: 1px solid #52627e; border-radius: 5px; color: #f4f5fa; background: #121b2e; font-size: 13px; text-align: center; }
+.risk-sicher .prediction-pick { border-color: #43a879; background: #10291f; }
+.risk-moderat .prediction-pick { border-color: #bd9b3e; background: #2a2414; }
+.risk-riskant .prediction-pick { border-color: #c45c67; background: #2d171d; }
+.prediction-reason-wrap { margin-top: 7px; }
+.prediction-reason-wrap summary { width: 100%; list-style: none; cursor: pointer; }
+.prediction-chevron { flex: 0 0 auto; width: 19px; height: 19px; color: #b5c0d5; transition: transform 160ms ease; }
+.prediction-reason-wrap summary:hover .prediction-chevron { color: #d1c5ff; }
+.prediction-reason-wrap[open] .prediction-chevron { transform: rotate(180deg); }
+.prediction-reason-wrap[open] summary { margin-bottom: 5px; }
+.prediction-reason { margin: 8px 0 11px; color: #c0c9d9; font-size: 13px; line-height: 1.6; }
+.prediction-meta { display: flex; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid #ffffff18; color: #aab5ca; font-size: 11px; line-height: 1.4; }
 .risk-label { font-weight: 650; }
+.prediction .tip-social .reaction,.prediction .tip-social .comment-form button { min-height: 36px; padding: 8px 11px; font-size: 11px; }
+.prediction .tip-social .comment-count,.prediction .tip-social .comment-list li,.prediction .tip-social .social-status { font-size: 12px; line-height: 1.5; }
+.prediction .tip-social .comment-list strong { font-size: 11px; }
+.prediction .tip-social .comment-form input { height: 40px; font-size: 12px; }
+.prediction .tip-social .comment-form button { padding-inline: 14px; }
+.prediction .tip-social .comment-delete { align-self: flex-start; padding: 1px 0; border: 0; color: #aab5ca; background: transparent; font: inherit; font-size: 11px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.prediction .tip-social .comment-delete:hover { color: #ffafb5; }
+.prediction .tip-social .comment-delete:focus-visible { outline: 2px solid #b7a1ec; outline-offset: 2px; }
 .risk-label-sicher { color: #6bc294; }
 .risk-label-moderat { color: #dbb95e; }
 .risk-label-riskant { color: #e4818a; }
@@ -127,8 +155,9 @@ body { background: var(--bg); }
 
 @media (max-width: 620px) {
   .tips-page { width: calc(100% - 24px); padding-top: 11px; }
-  .league-filter { gap: 6px; }
-  .league-filter-button { min-height: 50px; gap: 7px; padding-inline: 10px; font-size: 11px; }
+  .league-filter { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+  .league-filter-button { width: 100%; min-width: 0; min-height: 50px; justify-content: space-between; gap: 7px; padding-inline: 10px; font-size: 11px; }
+  .league-filter-button:not(:has(.league-filter-logo)) { justify-content: center; }
   .league-filter-logo { width: 26px; height: 26px; flex-basis: 26px; }
   .league-filter-button:has(.league-filter-logo.league-logo-bundesliga) { min-height: 50px; }
   .league-toggle { min-height: 68px; padding-inline: 11px; }
@@ -137,6 +166,10 @@ body { background: var(--bg); }
   .owner-matchday-filter { align-items: flex-start; flex-direction: column; gap: 5px; }
   .owner-matchday-filter select { width: 100%; }
   .league-sections { grid-template-columns: minmax(0,1fr); }
+}
+
+@media (max-width: 360px) {
+  .league-filter-button { gap: 6px; padding-inline: 8px; font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .league-chevron { transition: none; } }
 .fixture-intro { margin: 0; padding: 11px 2px 13px; color: #98a6c0; font-size: 10px; line-height: 1.55; }
@@ -169,26 +202,38 @@ body { background: var(--bg); }
 .clear-fixture-choice { justify-self: start; padding: 0; border: 0; color: #909bb2; background: transparent; font: inherit; font-size: 10px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .clear-fixture-choice:hover { color: #e6eaf3; }
 .show-skipped-button:hover { border-color: #8060a0; background: #241d35; }
-.show-skipped-button:focus-visible,.add-tip-button:focus-visible,.tip-save-button:focus-visible,.tip-cancel-button:focus-visible { outline: 2px solid #b7a1ec; outline-offset: 2px; }
+.show-skipped-button:focus-visible,.fixture-tip-toggle:focus-visible,.add-tip-button:focus-visible,.tip-save-button:focus-visible,.tip-cancel-button:focus-visible { outline: 2px solid #b7a1ec; outline-offset: 2px; }
+.fixture-tip-toggle { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border: 1px solid #3a4560; border-radius: 5px; color: #e1e7f3; background: #111a2d; font: inherit; font-size: 12px; font-weight: 650; text-align: left; cursor: pointer; }
+.fixture-tip-toggle:hover { border-color: #7866a9; background: #171a30; }
+.fixture-tip-chevron { width: 17px; height: 17px; flex: 0 0 auto; color: #b8a7e9; transition: transform 160ms ease; }
+.fixture-tip-toggle[aria-expanded="true"] .fixture-tip-chevron { transform: rotate(180deg); }
+.fixture-tip-panel { display: grid; gap: 9px; min-width: 0; }
 .add-tip-button { min-height: 38px; justify-self: start; padding: 7px 11px; border: 1px solid #465878; border-radius: 5px; color: #e1e8f5; background: #17223a; font: inherit; font-size: 11px; font-weight: 620; cursor: pointer; }
 .add-tip-button:hover { border-color: #8873c1; background: #201c37; }
 .fixture-tips { display: grid; gap: 7px; }
 .fixture-tip-count { margin: 2px 0 0; color: #b8c2d9; font-size: 10px; font-weight: 650; }
-.tip-entry-form { display: grid; gap: 10px; padding: 12px; border: 1px solid #655290; border-radius: 6px; background: #17162a; }
-.tip-entry-form h4 { margin: 0; color: #f0edfa; font-size: 12px; font-weight: 680; }
-.tip-entry-form label { display: grid; gap: 5px; color: #c2c9da; font-size: 10px; font-weight: 580; }
+.tip-entry-form { display: grid; gap: 12px; padding: 15px; border: 1px solid #655290; border-radius: 6px; background: #17162a; }
+.tip-entry-form h4 { margin: 0; color: #f0edfa; font-size: 14px; font-weight: 680; }
+.tip-entry-form label { display: grid; gap: 6px; color: #d2d8e5; font-size: 12px; font-weight: 580; }
 .tip-entry-form label span { color: #8f9bb3; font-weight: 450; }
-.tip-entry-form input,.tip-entry-form textarea,.tip-entry-form select { width: 100%; min-height: 39px; padding: 8px 9px; border: 1px solid #364260; border-radius: 4px; color: #f3f5fb; background: #0e1424; font: inherit; font-size: 12px; }
-.tip-entry-form textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+.pick-choice-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.pick-choice-fieldset legend { margin-bottom: 7px; color: #d2d8e5; font-size: 12px; font-weight: 580; }
+.pick-choice-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.pick-choice { min-height: 44px; padding: 8px 10px; border: 1px solid #34415f; border-radius: 4px; color: #c1cadd; background: #10192c; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.pick-choice:hover { border-color: #7663aa; color: #f1edff; }
+.pick-choice.selected { border-color: #a78bfa; color: #f2edff; background: #30254a; box-shadow: inset 0 0 0 1px #a78bfa35; }
+.pick-choice:focus-visible { outline: 2px solid #c2adff; outline-offset: 2px; }
+.tip-entry-form input,.tip-entry-form textarea,.tip-entry-form select { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #364260; border-radius: 4px; color: #f3f5fb; background: #0e1424; font: inherit; font-size: 14px; }
+.tip-entry-form textarea { min-height: 92px; resize: vertical; line-height: 1.55; }
 .tip-entry-form input::placeholder,.tip-entry-form textarea::placeholder { color: #78849c; }
 .tip-entry-form input:focus-visible,.tip-entry-form textarea:focus-visible,.tip-entry-form select:focus-visible { outline: 2px solid #a78bfa; outline-offset: 1px; }
-.tip-entry-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.tip-entry-row { display: grid; grid-template-columns: minmax(0,1fr); gap: 9px; }
 .tip-entry-actions { display: flex; gap: 7px; }
-.tip-save-button,.tip-cancel-button { min-height: 39px; padding: 7px 11px; border: 1px solid #5c4e82; border-radius: 4px; color: #f2edff; background: #40335f; font: inherit; font-size: 11px; font-weight: 650; cursor: pointer; }
+.tip-save-button,.tip-cancel-button { min-height: 44px; padding: 8px 14px; border: 1px solid #5c4e82; border-radius: 4px; color: #f2edff; background: #40335f; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
 .tip-save-button:hover { border-color: #a78bfa; background: #57477e; }
 .tip-cancel-button { border-color: #35405a; color: #aab5ca; background: #151d30; }
 .tip-cancel-button:hover { color: #eef1f8; border-color: #596b8c; }
-.tip-storage-note { margin: 0; color: #9aa7c2; font-size: 9px; line-height: 1.45; }
+.tip-storage-note { margin: 0; color: #aab6cc; font-size: 11px; line-height: 1.5; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (max-width: 620px) {
   .fixture-choice { min-height: 44px; font-size: 12px; }
@@ -197,6 +242,17 @@ body { background: var(--bg); }
   .fixture-time { font-size: 11px; }
   .fixture-actions { gap: 7px; }
   .fixture-intro { font-size: 11px; }
+  .fixture-tip-toggle { min-height: 44px; }
+  .prediction { padding: 13px; }
+  .prediction-selection { flex-wrap: wrap; gap: 7px; font-size: 13px; }
+  .prediction-market { flex: 0 0 100%; font-size: 12px; }
+  .prediction-pick { max-width: calc(100% - 30px); margin-left: 0; font-size: 13px; }
+  .prediction-chevron { margin-left: auto; }
+  .prediction-meta { flex-wrap: wrap; }
+  .public-match-card { padding: 11px; }
+  .public-match-heading { align-items: flex-start; flex-direction: column; font-size: 11px; }
+  .public-match-teams { flex-wrap: wrap; font-size: 14px; }
+  .public-match-selections { grid-template-columns: minmax(0,1fr); }
 }
 .empty-page { min-height: calc(100vh - 134px); display: flex; align-items: flex-start; justify-content: center; padding-top: 72px; }
 .empty-page p { margin: 0; color: #8e9bb5; font-size: 12px; }
