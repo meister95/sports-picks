@@ -47,13 +47,25 @@ create table if not exists public.prediq_tips (
 create index if not exists prediq_tips_public_order on public.prediq_tips (published_at desc) where is_published;
 create index if not exists prediq_tips_provider_fixture on public.prediq_tips (provider_fixture_id) where provider_fixture_id is not null;
 
+-- Private operational status for the owner's automatic result checks.
+create table if not exists public.result_check_status (
+  id text primary key check (id = 'latest'),
+  checked_at timestamptz not null default now(),
+  status text not null check (status in ('success', 'partial', 'failed')),
+  checked_count integer not null default 0 check (checked_count >= 0),
+  settled_count integer not null default 0 check (settled_count >= 0),
+  unavailable_count integer not null default 0 check (unavailable_count >= 0),
+  deferred_count integer not null default 0 check (deferred_count >= 0)
+);
+
 alter table public.profiles enable row level security;
 alter table public.tip_reactions enable row level security;
 alter table public.tip_comments enable row level security;
 alter table public.prediq_tips enable row level security;
+alter table public.result_check_status enable row level security;
 
 -- Remove any broad default grants before applying the least-privilege grants below.
-revoke all on public.profiles, public.tip_reactions, public.tip_comments, public.prediq_tips from anon, authenticated;
+revoke all on public.profiles, public.tip_reactions, public.tip_comments, public.prediq_tips, public.result_check_status from anon, authenticated;
 revoke select (id, username, is_owner, created_at) on public.profiles from anon;
 revoke select (id, tip_id, user_id, reaction, created_at) on public.tip_reactions from anon;
 revoke select (id, tip_id, user_id, body, created_at) on public.tip_comments from anon;
@@ -61,6 +73,8 @@ revoke select (id, owner_id, league, match_id, home, away, selection, reasoning,
 
 grant select on public.profiles, public.tip_reactions, public.tip_comments to authenticated;
 grant select on public.prediq_tips to authenticated;
+grant select on public.result_check_status to authenticated;
+grant all on public.result_check_status to service_role;
 grant insert (owner_id, league, match_id, home, away, selection, reasoning, odds, risk, result, kickoff, is_published, published_at) on public.prediq_tips to authenticated;
 grant update (league, match_id, home, away, selection, reasoning, odds, risk, result, kickoff, is_published) on public.prediq_tips to authenticated;
 grant delete on public.prediq_tips to authenticated;
@@ -116,6 +130,11 @@ create policy "Only owner can update tips" on public.prediq_tips for update to a
 );
 drop policy if exists "Only owner can delete tips" on public.prediq_tips;
 create policy "Only owner can delete tips" on public.prediq_tips for delete to authenticated using (
+  exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_owner)
+);
+
+drop policy if exists "Only owner can read result check status" on public.result_check_status;
+create policy "Only owner can read result check status" on public.result_check_status for select to authenticated using (
   exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_owner)
 );
 

@@ -12,9 +12,15 @@ const resultLabels: Record<TipResult, string> = { offen: "Offen", gewonnen: "Gew
 export default async function StatistikPage() {
   const current = await requireUser();
   const supabase = await createClient();
-  const { data } = supabase
-    ? await supabase.from("prediq_tips").select("id,league,home,away,selection,result,kickoff,published_at").eq("is_published", true).order("published_at", { ascending: false })
-    : { data: [] };
+  const isOwner = current.profile?.is_owner === true;
+  const [{ data }, { data: checkStatus }] = await Promise.all([
+    supabase
+      ? supabase.from("prediq_tips").select("id,league,home,away,selection,result,kickoff,published_at").eq("is_published", true).order("published_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    isOwner && supabase
+      ? supabase.from("result_check_status").select("checked_at,status,checked_count,settled_count,unavailable_count,deferred_count").eq("id", "latest").maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
   const tips = data ?? [];
   const stats = summarizeTips(tips);
   const open = tips.filter((tip) => tip.result === "offen").length;
@@ -35,7 +41,7 @@ export default async function StatistikPage() {
   return <>
     <SiteHeader currentPath="/statistik" />
     <main className="page-wrap quick-page stats-page">
-      {current.profile?.is_owner === true && <ResultsRefreshButton />}
+      {isOwner && <ResultsRefreshButton checkStatus={checkStatus ?? null} />}
       <section className="stats-grid-compact" aria-label="Statistik meiner Tipps">
         {tiles.map((stat) => <article className={`stat-tile stat-${stat.tone}`} key={stat.label}>
           <span>{stat.label}</span>

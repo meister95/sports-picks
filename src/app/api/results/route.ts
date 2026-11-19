@@ -17,6 +17,21 @@ type OpenTip = {
 };
 type ApiResponse<T> = { response?: T[]; errors?: Record<string, unknown> };
 type RequestBudget = { used: number; limit: number };
+type CheckStatus = "success" | "partial" | "failed";
+
+async function saveCheckStatus(admin: SupabaseClient<any>, values: {
+  status: CheckStatus; checked: number; settled: number; unavailable: number; deferred: number;
+}) {
+  await admin.from("result_check_status").upsert({
+    id: "latest",
+    checked_at: new Date().toISOString(),
+    status: values.status,
+    checked_count: values.checked,
+    settled_count: values.settled,
+    unavailable_count: values.unavailable,
+    deferred_count: values.deferred,
+  }, { onConflict: "id" });
+}
 
 function dateFromKickoff(value: string) {
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
@@ -69,7 +84,7 @@ async function runResultCheck() {
   const apiKey = process.env.API_FOOTBALL_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!apiKey || !supabaseUrl || !serviceKey) {
+  if (!supabaseUrl || !serviceKey) {
     return NextResponse.json({ error: "Die Ergebnisabfrage ist noch nicht vollständig eingerichtet." }, { status: 503 });
   }
   if (new URL(supabaseUrl).hostname !== "fggreivlzksnotonnrse.supabase.co") {
@@ -77,10 +92,17 @@ async function runResultCheck() {
   }
 
   const admin = createSupabaseClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } }) as SupabaseClient<any>;
+  if (!apiKey) {
+    await saveCheckStatus(admin, { status: "failed", checked: 0, settled: 0, unavailable: 0, deferred: 0 });
+    return NextResponse.json({ error: "Der Anbieter für Ergebnisdaten ist gerade nicht eingerichtet.", status: "failed" }, { status: 503 });
+  }
   const { data: openTips, error } = await admin.from("prediq_tips")
     .select("id,league,home,away,selection,kickoff,provider_fixture_id")
     .eq("is_published", true).eq("result", "offen").order("kickoff", { ascending: true }).limit(5000);
-  if (error) return NextResponse.json({ error: "Offene Tipps konnten nicht geladen werden." }, { status: 500 });
+  if (error) {
+    await saveCheckStatus(admin, { status: "failed", checked: 0, settled: 0, unavailable: 0, deferred: 0 });
+    return NextResponse.json({ error: "Offene Tipps konnten nicht geladen werden.", status: "failed" }, { status: 500 });
+  }
 
   const tips = (openTips ?? []) as OpenTip[];
   const budget: RequestBudget = { used: 0, limit: 90 };
@@ -163,7 +185,13 @@ async function runResultCheck() {
     }
   }
 
-  return NextResponse.json({ checked, settled, unavailable, apiRequests: budget.used, deferredTips, deferredGroups: Math.max(0, groups.size - selectedGroups.length) });
+  const deferredGroups = Math.max(0, groups.size - selectedGroups.length);
+  const deferred = deferredTips + deferredGroups;
+  const status: CheckStatus = unavailable > 0 && checked === 0 && deferred === 0
+    ? "failed"
+    : unavailable > 0 || deferred > 0 ? "partial" : "success";
+  await saveCheckStatus(admin, { status, checked, settled, unavailable, deferred });
+  return NextResponse.json({ checked, settled, unavailable, apiRequests: budget.used, deferredTips, deferredGroups, status });
 }
 
 export async function GET(request: Request) {
