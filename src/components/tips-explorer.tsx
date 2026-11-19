@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { fixtureSchedules } from "@/data/fixtures";
 import { leagueLogos, leagueOrder, type Fixture, type Tip, type TipRisk, type TipResult } from "@/data/picks";
 import { TipSocial } from "@/components/tip-social";
-import { publishTip } from "@/app/tipps/actions";
+import { deleteTip, publishTip, setTipResult, updateTip } from "@/app/tipps/actions";
 import Image from "next/image";
 
 type FixtureChoice = "follow" | "skip";
@@ -21,6 +21,7 @@ const pickMarkets = [
   { id: "team-goals", label: "Team trifft" },
   { id: "half-time", label: "Halbzeitergebnis" },
   { id: "player-goal", label: "Spieler erzielt ein Tor" },
+  { id: "player-card", label: "Spieler erhält eine gelbe Karte" },
   { id: "player-shots", label: "Spieler: Schüsse aufs Tor" },
   { id: "total-corners", label: "Gesamtecken" },
   { id: "total-cards", label: "Gesamtkarten" },
@@ -39,6 +40,7 @@ function optionsFor(market: PickMarket, fixture: Fixture) {
     case "team-goals": return [`${fixture.home}: Ja`, `${fixture.home}: Nein`, `${fixture.away}: Ja`, `${fixture.away}: Nein`];
     case "half-time": return [fixture.home, "Unentschieden", fixture.away];
     case "player-goal": return ["Erzielt ein Tor"];
+    case "player-card": return ["Erhält eine gelbe Karte"];
     case "player-shots": return ["1+ Schuss aufs Tor", "2+ Schüsse aufs Tor", "3+ Schüsse aufs Tor"];
     case "total-corners": return [7.5, 8.5, 9.5, 10.5, 11.5].flatMap((line) => [`Über ${line.toLocaleString("de-AT")}`, `Unter ${line.toLocaleString("de-AT")}`]);
     case "total-cards": return [2.5, 3.5, 4.5, 5.5].flatMap((line) => [`Über ${line.toLocaleString("de-AT")}`, `Unter ${line.toLocaleString("de-AT")}`]);
@@ -47,17 +49,68 @@ function optionsFor(market: PickMarket, fixture: Fixture) {
 }
 
 function TipCard({ tip }: { tip: Tip }) {
+  const [deleting, startDelete] = useTransition();
+  const [saving, startSave] = useTransition();
+  const [updatingResult, startResultUpdate] = useTransition();
+  const [editing, setEditing] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [resultError, setResultError] = useState("");
+
+  function removeTip() {
+    if (!window.confirm(`Diesen Tipp für ${tip.home} gegen ${tip.away} wirklich löschen?`)) return;
+    setDeleteError("");
+    startDelete(async () => {
+      const result = await deleteTip(tip.id);
+      if (result.error) setDeleteError(result.error);
+    });
+  }
+
+  function saveEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setSaveError("");
+    startSave(async () => {
+      const result = await updateTip(tip.id, formData);
+      if (result.error) setSaveError(result.error);
+      else setEditing(false);
+    });
+  }
+
+  function changeResult(value: string) {
+    setResultError("");
+    startResultUpdate(async () => {
+      const result = await setTipResult(tip.id, value);
+      if (result.error) setResultError(result.error);
+    });
+  }
+
   return <article className={`prediction ${tip.result === "offen" ? `risk-${tip.risk}` : `result-${tip.result}`}`}>
     <div className="prediction-heading">
-      <span className="prediction-match">{tip.home} <span>vs</span> {tip.away}</span>
       <span className={`prediction-result result-label-${tip.result}`}>{resultLabels[tip.result]}</span>
     </div>
-    <TipSelection tip={tip}/>
-    <div className="prediction-meta">
-      <span className={`risk-label risk-label-${tip.risk}`}>{riskLabels[tip.risk]} eingeschätzt</span>
-      <span>{tip.kickoff}</span>
+    {editing ? <form className="tip-entry-form" onSubmit={saveEdit}>
+      <h4>Tipp bearbeiten</h4>
+      <label>Auswahl<input name="selection" defaultValue={tip.selection} maxLength={100} required /></label>
+      <label>Begründung (optional)<textarea name="reasoning" defaultValue={tip.reasoning === noReasoning ? "" : tip.reasoning} maxLength={1000} rows={3} placeholder="Warum erwartest du dieses Ergebnis?" /></label>
+      <label>Risiko<select name="risk" defaultValue={tip.risk}><option value="sicher">Sicher</option><option value="moderat">Moderat</option><option value="riskant">Riskant</option></select></label>
+      {saveError && <p className="tip-delete-error" role="alert">{saveError}</p>}
+      <div className="tip-entry-actions"><button className="tip-save-button" type="submit" disabled={saving}>{saving ? "Speichere …" : "Änderungen speichern"}</button><button className="tip-cancel-button" type="button" onClick={() => { setEditing(false); setSaveError(""); }} disabled={saving}>Abbrechen</button></div>
+    </form> : <>
+      <TipSelection tip={tip}/>
+      <div className="prediction-meta">
+        <span className={`risk-label risk-label-${tip.risk}`}>{riskLabels[tip.risk]} eingeschätzt</span>
+        <span>{tip.kickoff.split(" · ")[0]}</span>
+      </div>
+      <TipSocial tipId={tip.id} isOwner/>
+    </>}
+    <div className="tip-owner-controls">
+      {!editing && <label className="tip-result-control">Ergebnis<select value={tip.result} onChange={(event) => changeResult(event.target.value)} disabled={updatingResult || deleting} aria-label={`Ergebnis für ${tip.home} gegen ${tip.away}`}><option value="offen">Offen</option><option value="gewonnen">Gewonnen</option><option value="verloren">Verloren</option></select></label>}
+      {!editing && <button type="button" className="tip-edit-button" onClick={() => setEditing(true)} disabled={deleting}>Bearbeiten</button>}
+      {!editing && <button type="button" className="tip-delete-button" onClick={removeTip} disabled={deleting}>{deleting ? "Wird gelöscht …" : "Tipp löschen"}</button>}
+      {resultError && <p className="tip-delete-error" role="alert">{resultError}</p>}
+      {deleteError && <p className="tip-delete-error" role="alert">{deleteError}</p>}
     </div>
-    <TipSocial tipId={tip.id} isOwner/>
   </article>;
 }
 
@@ -229,7 +282,6 @@ export function TipsExplorer({ tips, isOwner }: { tips: Tip[]; isOwner: boolean 
           </h2>
           {open && <div className="league-content" id={panelId}>
             <div className="fixture-matchday">
-              <p className="fixture-intro">Wähle die Spiele aus, die du einschätzen kannst. Mit „Verfolge ich“ öffnet sich direkt die Tipp-Eingabe. Zeiten in CET.</p>
               {skippedCount > 0 && <button className="show-skipped-button" type="button" aria-expanded={Boolean(showSkipped[league])} onClick={() => setShowSkipped((current) => ({ ...current, [league]: !current[league] }))}>
                 {showSkipped[league] ? "Übersprungene Spiele ausblenden" : `${skippedCount} übersprungene ${skippedCount === 1 ? "Partie anzeigen" : "Partien anzeigen"}`}
               </button>}
@@ -308,6 +360,8 @@ function TipEntryForm({ fixture, onSave, onCancel }: { fixture: Fixture; onSave:
     ? (customChoice.trim() ? `Eigene Auswahl: ${customChoice.trim()}` : "")
     : market === "player-goal"
       ? (player.trim() ? `${marketLabel}: ${player.trim()} erzielt ein Tor` : "")
+      : market === "player-card"
+        ? (player.trim() ? `${marketLabel}: ${player.trim()} erhält eine gelbe Karte` : "")
       : market === "player-shots"
         ? (player.trim() && choice ? `${marketLabel}: ${player.trim()} · ${choice}` : "")
         : `${marketLabel}: ${choice}`;
@@ -327,7 +381,7 @@ function TipEntryForm({ fixture, onSave, onCancel }: { fixture: Fixture; onSave:
     <label>Wettart<select value={market} onChange={(event) => { const next = event.target.value as PickMarket; setMarket(next); setChoice(optionsFor(next, fixture)[0] ?? ""); setPlayer(""); setCustomChoice(""); }}>
       {pickMarkets.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
     </select></label>
-    {(market === "player-goal" || market === "player-shots") && <label>Spielername<input value={player} onChange={(event) => setPlayer(event.target.value)} maxLength={45} placeholder="z. B. Bukayo Saka" /></label>}
+    {(market === "player-goal" || market === "player-card" || market === "player-shots") && <label>Spielername<input value={player} onChange={(event) => setPlayer(event.target.value)} maxLength={45} placeholder="z. B. Bukayo Saka" required /></label>}
     {market === "custom" ? <label>Deine Auswahl<input value={customChoice} onChange={(event) => setCustomChoice(event.target.value)} maxLength={80} placeholder="z. B. Exaktes Ergebnis 2:1" /></label> : <fieldset className="pick-choice-fieldset">
       <legend>Auswahl</legend>
       <div className="pick-choice-grid">{options.map((option) => <button key={option} type="button" className={choice === option ? "pick-choice selected" : "pick-choice"} aria-pressed={choice === option} onClick={() => setChoice(option)}>{option}</button>)}</div>

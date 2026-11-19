@@ -49,7 +49,7 @@ export type Fixture = {
   kickoff: string;
 };
 
-export function summarizeTips(entries: readonly Tip[]) {
+export function summarizeTips(entries: readonly Pick<Tip, "result">[]) {
   const won = entries.filter((tip) => tip.result === "gewonnen").length;
   const lost = entries.filter((tip) => tip.result === "verloren").length;
   const settled = won + lost;
