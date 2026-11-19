@@ -8,9 +8,12 @@ export async function proxy(request: NextRequest) {
   const isPublicAuthRoute = ["/login", "/registrieren", "/auth/confirm"].some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
+  // This route performs its own cron-secret or owner-session check.
+  const isPublicResultsRoute = pathname === "/api/results";
+  const isPublicRoute = isPublicAuthRoute || isPublicResultsRoute;
   const env = getSupabaseEnv();
   if (!env) {
-    return isPublicAuthRoute
+    return isPublicRoute
       ? NextResponse.next({ request })
       : NextResponse.redirect(new URL("/login", request.url));
   }
@@ -33,7 +36,7 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
-  if (!claims && !isPublicAuthRoute) {
+  if (!claims && !isPublicRoute) {
     const redirectResponse = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
     return redirectResponse;
