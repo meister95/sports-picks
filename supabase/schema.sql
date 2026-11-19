@@ -31,19 +31,21 @@ create table if not exists public.prediq_tips (
   owner_id uuid not null references public.profiles(id) on delete cascade,
   league text not null,
   match_id text not null,
+  provider_fixture_id bigint,
   home text not null,
   away text not null,
   selection text not null check (char_length(btrim(selection)) between 1 and 100),
   reasoning text not null check (char_length(btrim(reasoning)) between 1 and 1000),
   odds numeric(8, 2) check (odds is null or odds > 1),
   risk text not null check (risk in ('sicher', 'moderat', 'riskant')),
-  result text not null default 'offen' check (result in ('offen', 'gewonnen', 'verloren')),
+  result text not null default 'offen' check (result in ('offen', 'gewonnen', 'verloren', 'annulliert')),
   kickoff text not null,
   is_published boolean not null default true,
   published_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
 create index if not exists prediq_tips_public_order on public.prediq_tips (published_at desc) where is_published;
+create index if not exists prediq_tips_provider_fixture on public.prediq_tips (provider_fixture_id) where provider_fixture_id is not null;
 
 alter table public.profiles enable row level security;
 alter table public.tip_reactions enable row level security;

@@ -73,10 +73,11 @@ function statValue(fixture: ApiFixture, teamId: number | undefined, type: string
 
 export function evaluateTip(selection: string, home: string, away: string, fixture: ApiFixture): TipResult | null {
   const status = fixture.fixture?.status?.short;
-  if (!status || !["FT", "AET", "PEN", "AWD", "WO"].includes(status)) return null;
   const homeName = fixture.teams?.home?.name;
   const awayName = fixture.teams?.away?.name;
   if (!homeName || !awayName || teamKey(homeName) !== teamKey(home) || teamKey(awayName) !== teamKey(away)) return null;
+  if (status === "CANC") return "annulliert";
+  if (!status || !["FT", "AET", "PEN", "AWD", "WO"].includes(status)) return null;
   const homeGoals = fixture.goals?.home;
   const awayGoals = fixture.goals?.away;
   if (typeof homeGoals !== "number" || typeof awayGoals !== "number") return null;
@@ -96,7 +97,7 @@ export function evaluateTip(selection: string, home: string, away: string, fixtu
   }
   if (market === "Unentschieden: Einsatz zurück") {
     const selected = teamKey(pick) === teamKey(home) ? "home" : teamKey(pick) === teamKey(away) ? "away" : null;
-    return outcome === "draw" ? null : selected ? (selected === outcome ? "gewonnen" : "verloren") : null;
+    return outcome === "draw" ? "annulliert" : selected ? (selected === outcome ? "gewonnen" : "verloren") : null;
   }
   if (market === "Beide Teams treffen") {
     const scored = homeGoals > 0 && awayGoals > 0;

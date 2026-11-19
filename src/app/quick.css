@@ -119,6 +119,7 @@ body { background: var(--bg); }
 .prediction.risk-riskant { border-color: #c45c67; }
 .prediction.result-gewonnen { border-color: #237b52; background: #123523; }
 .prediction.result-verloren { border-color: #8a3842; background: #3a1920; }
+.prediction.result-annulliert { border-color: #53617a; background: #182133; }
 .prediction-heading { display: flex; align-items: flex-start; justify-content: flex-end; gap: 10px; }
 .prediction-result { flex: 0 0 auto; color: #aeb9ce; font-size: 10px; }
 .fixture-tips .prediction { position: relative; }
@@ -161,6 +162,7 @@ body { background: var(--bg); }
 .risk-label-riskant { color: #e4818a; }
 .result-label-gewonnen { color: #80d5a3; }
 .result-label-verloren { color: #f08a92; }
+.result-label-annulliert { color: #b4c0d5; }
 
 @media (max-width: 620px) {
   .tips-page { width: calc(100% - 24px); padding-top: 11px; }
@@ -270,10 +272,11 @@ body { background: var(--bg); }
 .results-refresh-button:disabled { opacity: .65; cursor: wait; }
 .results-refresh-control p { margin: 0; color: #9aa7c2; font-size: 11px; }
 .stats-grid-compact { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
-.stat-tile { min-height: 88px; display: flex; flex-direction: column; justify-content: space-between; padding: 12px 13px; border: 1px solid #273451; border-radius: 7px; background: #10172a; }
+.stat-tile { min-height: 96px; display: flex; flex-direction: column; justify-content: space-between; gap: 5px; padding: 12px 13px; border: 1px solid #273451; border-radius: 7px; background: #10172a; }
 .stat-tile>span { color: #9aa7c2; font-size: 10px; }
 .stat-tile strong { color: #f3f5fb; font-size: 23px; font-weight: 680; line-height: 1; font-variant-numeric: tabular-nums; }
 .stat-tile strong small { margin-left: 2px; color: #c0adff; font-size: 14px; }
+.stat-tile .stat-detail { color: #8e9bb5; font-size: 9px; line-height: 1.35; }
 .stat-won { border-color: #285a44; }
 .stat-lost { border-color: #633843; }
 .stat-published { border-color: #51447c; }
@@ -286,11 +289,13 @@ body { background: var(--bg); }
 .stats-bar-won { background: #43a879; }
 .stats-bar-lost { background: #c45c67; }
 .stats-bar-open { background: #596782; }
+.stats-bar-annulled { background: #8a789f; }
 .stats-outcome-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
 .stats-outcome-legend span { display: inline-flex; align-items: center; gap: 6px; color: #aeb9ce; font-size: 11px; }
 .stats-outcome-legend strong { color: #f3f5fb; font-variant-numeric: tabular-nums; }
 .stats-outcome-legend i { width: 8px; height: 8px; border-radius: 50%; }
 .legend-won { background: #43a879; }.legend-lost { background: #c45c67; }.legend-open { background: #596782; }
+.legend-annulled { background: #8a789f; }
 .stats-detail-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 10px; }
 .stats-league-list,.stats-recent-list { display: grid; gap: 13px; padding: 0; margin: 0; list-style: none; }
 .stats-league-line { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
@@ -304,7 +309,7 @@ body { background: var(--bg); }
 .stats-recent-list li strong span { color: #77839d; font-size: 9px; }
 .stats-recent-list li small { color: #8e9bb5; font-size: 10px; }
 .stats-result { flex: 0 0 auto; font-size: 10px; font-weight: 650; }
-.stats-result-gewonnen { color: #6bc294; }.stats-result-verloren { color: #e4818a; }.stats-result-offen { color: #9aa7c2; }
+.stats-result-gewonnen { color: #6bc294; }.stats-result-verloren { color: #e4818a; }.stats-result-offen { color: #9aa7c2; }.stats-result-annulliert { color: #b4c0d5; }
 .stats-empty { margin: 0; color: #98a5bf; font-size: 12px; line-height: 1.6; }
 .stats-back-link { display: inline-block; margin-top: 13px; color: #8995af; font-size: 9px; }
 .stats-back-link:hover { color: #c0adff; }

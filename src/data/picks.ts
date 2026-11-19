@@ -1,5 +1,5 @@
 export type TipRisk = "sicher" | "moderat" | "riskant";
-export type TipResult = "offen" | "gewonnen" | "verloren";
+export type TipResult = "offen" | "gewonnen" | "verloren" | "annulliert";
 
 export type Tip = {
   id: string;
@@ -52,10 +52,13 @@ export type Fixture = {
 export function summarizeTips(entries: readonly Pick<Tip, "result">[]) {
   const won = entries.filter((tip) => tip.result === "gewonnen").length;
   const lost = entries.filter((tip) => tip.result === "verloren").length;
+  const annulled = entries.filter((tip) => tip.result === "annulliert").length;
   const settled = won + lost;
   return {
     won,
     lost,
+    annulled,
+    settled,
     published: entries.length,
     hitRate: settled ? Math.round((won / settled) * 100) : 0,
   };

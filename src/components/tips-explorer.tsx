@@ -9,7 +9,7 @@ import Image from "next/image";
 
 type FixtureChoice = "follow" | "skip";
 const riskLabels: Record<TipRisk, string> = { sicher: "Sicher", moderat: "Moderat", riskant: "Riskant" };
-const resultLabels: Record<TipResult, string> = { offen: "Offen", gewonnen: "Gewonnen", verloren: "Verloren" };
+const resultLabels: Record<TipResult, string> = { offen: "Offen", gewonnen: "Gewonnen", verloren: "Verloren", annulliert: "Annulliert" };
 const noReasoning = "Keine Begründung angegeben.";
 
 const pickMarkets = [
@@ -105,7 +105,7 @@ function TipCard({ tip }: { tip: Tip }) {
       <TipSocial tipId={tip.id} isOwner/>
     </>}
     <div className="tip-owner-controls">
-      {!editing && <label className="tip-result-control">Ergebnis<select value={tip.result} onChange={(event) => changeResult(event.target.value)} disabled={updatingResult || deleting} aria-label={`Ergebnis für ${tip.home} gegen ${tip.away}`}><option value="offen">Offen</option><option value="gewonnen">Gewonnen</option><option value="verloren">Verloren</option></select></label>}
+      {!editing && <label className="tip-result-control">Ergebnis<select value={tip.result} onChange={(event) => changeResult(event.target.value)} disabled={updatingResult || deleting} aria-label={`Ergebnis für ${tip.home} gegen ${tip.away}`}><option value="offen">Offen</option><option value="gewonnen">Gewonnen</option><option value="verloren">Verloren</option><option value="annulliert">Annulliert</option></select></label>}
       {!editing && <button type="button" className="tip-edit-button" onClick={() => setEditing(true)} disabled={deleting}>Bearbeiten</button>}
       {!editing && <button type="button" className="tip-delete-button" onClick={removeTip} disabled={deleting}>{deleting ? "Wird gelöscht …" : "Tipp löschen"}</button>}
       {resultError && <p className="tip-delete-error" role="alert">{resultError}</p>}

@@ -86,7 +86,7 @@ export async function setTipResult(tipId: string, resultValue: string): Promise<
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tipId)) {
     return { error: "Dieser Tipp konnte nicht gefunden werden." };
   }
-  if (resultValue !== "offen" && resultValue !== "gewonnen" && resultValue !== "verloren") {
+  if (resultValue !== "offen" && resultValue !== "gewonnen" && resultValue !== "verloren" && resultValue !== "annulliert") {
     return { error: "Bitte wähle ein gültiges Ergebnis." };
   }
   const result = resultValue as TipResult;
